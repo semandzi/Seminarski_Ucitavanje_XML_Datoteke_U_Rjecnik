@@ -3,31 +3,64 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
+using System.Xml.XPath;
+
 
 namespace Seminarski
 {
+    public static class XMLExtend
+    {
+        public static string GetXPath_UsingPreviousSiblings(this XElement element)
+        {
+            string path = "/" + element.Name;
+
+            XElement parentElement = element.Parent as XElement;
+            if (parentElement != null)
+            {
+                // Gets the position within the parent element, based on previous siblings of the same name.
+                // However, this position is irrelevant if the element is unique under its parent:
+                XPathNavigator navigator = parentElement.CreateNavigator();
+
+                // Climbing up to the parent elements:
+                path = parentElement.GetXPath_UsingPreviousSiblings() + path;
+            }
+
+            return path;
+        }
+    }
     class XML_to_Dictionary : XML
     {
        
 
         void XML.Pretvori()
         {
-            var doc = XDocument.Load(@"C:\Users\mandz\Desktop\gradovi.xml");
-            var rootNodes = doc.Root.DescendantNodes().OfType<XElement>();
-            var keyValuePairs = from n in rootNodes
-                                select new
-                                {
-                                    TagName = n.Name,
-                                    TagValue = n.Value
-                                };
+           
 
-            Dictionary<string, string> allItems = new Dictionary<string, string>();
-            foreach (var token in keyValuePairs)
+            Dictionary<string, int> nodes = new Dictionary<string, int>();
+            XDocument doc = XDocument.Load(@"..\..\gradovi.xml");
+
+            List<string> list = new List<string>();
+
+            foreach (XElement element in doc.Descendants().Where(p => p.HasElements == false))
             {
-                allItems.Add(token.TagName.ToString(), token.TagValue.ToString());
+                XElement parentElement = element.Parent;
+                if (!list.Contains(parentElement.Name.LocalName))
+                {
+                    list.Add(parentElement.Name.LocalName);
+                }
             }
-            allItems.Select(i => $"{i.Key}: {i.Value}").ToList().ForEach(Console.WriteLine);
+
+            foreach (var item in list)
+            {
+                XElement subxElement = doc.Descendants(item).FirstOrDefault();
+
+                nodes.Add(subxElement.GetXPath_UsingPreviousSiblings(), doc.Descendants(item).Count());
+                Console.WriteLine(subxElement);
+
+            }
+
         }
     }
 }
